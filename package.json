@@ -1,0 +1,15 @@
+{
+  "name": "xstate-form-validation",
+  "version": "0.0.1",
+  "description": "x-state machines lib for form validation",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "type": "module",
+  "author": "Slava Kazachenko",
+  "license": "MIT",
+  "dependencies": {
+    "xstate": "^4.17.1"
+  }
+}
