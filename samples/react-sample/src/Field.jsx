@@ -1,27 +1,21 @@
+import { forwardRef } from "react";
 import "./Field.css";
-function Field({ current, send, rules, ...rest }) {
+const Field = forwardRef(({ state, ...rest }, ref) => {
+    const { isInvalid, isValid, error } = state;
     return (
-        <div>
+        <div className="fieldContainer">
             <input
-				className="field"
+                ref={ref}
+                className="field"
                 style={{
-                    borderColor: current.matches("valid") ? "green" : current.matches("invalid") ? "red" : "black",
-                }}
-                onInput={(e) => {
-                    if (current.matches('idle')) return;
-                    send({ type: "INPUT", rules, value: e.target.value });
-                }}
-                onBlur={(e) => {
-                    if (current.matches('idle')) {
-                        send({ type: "INPUT", rules, value: e.target.value })
-                    }
+                    borderColor: isValid ? "green" : isInvalid ? "red" : "black",
                 }}
                 type="text"
                 {...rest}
             />
-            {current.context.error && <span style={{ color: "red" }}>{current.context.error}</span>}
+            {error && <span style={{ color: "red" }}>{error}</span>}
         </div>
     );
-}
+});
 
 export default Field;
