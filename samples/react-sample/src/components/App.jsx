@@ -1,33 +1,11 @@
-import { useRef, useEffect, useState } from 'react';
-import { createValidationService } from './syncValidationMachine'
-
+import { useValidate } from "../hooks/useValidate";
 import Field from "./Field";
-import { minLength, required } from "./rules";
+import { minLength, required } from "../rules";
 
 const nameRequired = required("Input your name");
 const passRequired = required("Input password");
 const nameMinLength = minLength(3, "Name should be more than 3 symbols");
 const passMinLength = minLength(8, "Pass should be more than 8 symbols");
-
-
-function useValidate(rules) {
-    const [state, setState] = useState({});
-    const ref = useRef();
-
-    useEffect(() => {
-        const { service, register } = createValidationService({field: ref.current, rules});
-        register(ref.current)
-        service.onTransition(state => {
-            setState({
-                isValid: state.matches('valid'),
-                isInvalid: state.matches('invalid'),
-                error: state.context.error,
-            })
-        })
-    }, [])
-    
-    return [state, ref];
-}
 
 function App() {
     const [nameState, nameRef] = useValidate([nameRequired, nameMinLength]);
