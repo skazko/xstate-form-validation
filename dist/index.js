@@ -5,7 +5,8 @@ Object.defineProperty(exports, '__esModule', { value: true });
 var xstate = require('xstate');
 
 function validator(context, event) {
-    const { value, rules } = event;
+    const { value } = event;
+    const { rules } = context;
     const rulesLength = rules?.length || 0;
     return new Promise((resolve, reject) => {
         for (let i = 0; i < rulesLength; i++) {
@@ -49,6 +50,9 @@ const fieldValidationMachine = xstate.createMachine(
                     VALIDATE: {
                         target: "validating",
                     },
+                    UPDATE_RULES: {
+                        actions: "updateRules"
+                    }
                 },
             },
             invalid: {
@@ -56,6 +60,9 @@ const fieldValidationMachine = xstate.createMachine(
                     VALIDATE: {
                         target: "validating",
                     },
+                    UPDATE_RULES: {
+                        actions: "updateRules"
+                    }
                 },
             },
         },
@@ -68,6 +75,9 @@ const fieldValidationMachine = xstate.createMachine(
             setError: xstate.assign({
                 error: (context, event) => event.data.message,
             }),
+            updateRules: xstate.assign({
+                rules: (context, event) => event.rules,
+            })
         },
     }
 );
@@ -75,16 +85,18 @@ const fieldValidationMachine = xstate.createMachine(
 
 const createValidationService = ({rules = []}) => {
     const machine = fieldValidationMachine.withContext({
-        error: null
+        error: null,
+        rules
     });
 
     const service = xstate.interpret(machine);
 
     service.start();
 
-    const validate = (value) => service.send({ type: "VALIDATE", value, rules });
+    const validate = (value) => service.send({ type: "VALIDATE", value });
     
     function register(field) {
+        // could be different validation types
         field.addEventListener("input", (e) => {
             validate(e.target.value);
         });
