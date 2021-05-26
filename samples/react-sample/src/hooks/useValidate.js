@@ -2,24 +2,24 @@ import { useRef, useEffect, useState } from "react";
 import { createValidationService } from "xstate-form-validation";
 
 export function useValidate(rules) {
-    const [state, setState] = useState({});
-    const ref = useRef();
-    
+  const [isValid, setValid] = useState(false);
+  const [error, setError] = useState(null);
+  const ref = useRef();
+  const [{ service, register, updateRules }] = useState(createValidationService({ rules }));
 
-    useEffect(() => {
-        const { service, register } = createValidationService({ rules });
-        register(ref.current);
-        service.onTransition((state) => {
-            if (state.matches('valid') || state.matches('invalid')) {
-                setState({
-                    isValid: state.matches("valid"),
-                    isInvalid: state.matches("invalid"),
-                    error: state.context.error,
-                });
-            }
-            
-        });
-    }, []);
+  useEffect(() => {
+    register(ref.current);
+    service.onTransition((state) => {
+      if (state.matches("valid") || state.matches("invalid")) {
+        setValid(state.matches("valid"));
+        setError(state.matches('valid') ? null : state.context.error);
+      }
+    });
+  }, []);
 
-    return [state, ref];
+  useEffect(() => {
+    updateRules(rules, ref.current.value);
+}, [rules]);
+
+  return { isValid, ref, error };
 }

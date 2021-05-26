@@ -1,14 +1,13 @@
 import { forwardRef } from "react";
 
-const Field = forwardRef(({ state, ...rest }, ref) => {
-    const { isInvalid, isValid, error } = state;
+const Field = forwardRef(({ isValid, error, ...rest }, ref) => {
     return (
         <div className="fieldContainer">
             <input
                 ref={ref}
                 className="field"
                 style={{
-                    borderColor: isValid ? "green" : isInvalid ? "red" : "black",
+                    borderColor: isValid ? "green" : error ? "red" : "black",
                 }}
                 type="text"
                 {...rest}
