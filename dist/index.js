@@ -68,6 +68,7 @@ const fieldValidationMachine = xstate.createMachine(
 );
 
 function validator(context, event) {
+  console.log('validator');
   console.log(context);
   console.log(event);
   const { value } = event;
@@ -97,7 +98,7 @@ const createValidationService = ({ rules = [] }) => {
   service.start();
 
   const validate = (value) => service.send({ type: "VALIDATE", value });
-  const updateRules = (rules) => service.send({ type: "UPDATE_RULES", rules });
+  const updateRules = (rules, value) => service.send({ type: "UPDATE_RULES", rules, value });
 
   function register(field) {
     // could be different validation types

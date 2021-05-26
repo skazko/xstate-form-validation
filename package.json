@@ -1,6 +1,6 @@
 {
   "name": "xstate-form-validation",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "x-state machines lib for form validation",
   "main": "./dist/index.js",
   "module": "./dist/index.es.js",
