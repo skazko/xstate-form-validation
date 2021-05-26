@@ -68,9 +68,6 @@ const fieldValidationMachine = xstate.createMachine(
 );
 
 function validator(context, event) {
-  console.log('validator');
-  console.log(context);
-  console.log(event);
   const { value } = event;
   const { rules } = context;
   const rulesLength = rules?.length || 0;
