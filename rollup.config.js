@@ -1,16 +1,16 @@
-import pkg from './package.json';
+import pkg from "./package.json";
 
 export default {
-  input: 'lib/index.js',
-  external: ['xstate'],
+  input: "lib/index.js",
+  external: ["xstate"],
   output: [
     {
       file: pkg.main,
-      format: 'cjs',
+      format: "cjs",
     },
     {
       file: pkg.module,
-      format: 'es',
-    }
-  ]
-}
+      format: "es",
+    },
+  ],
+};

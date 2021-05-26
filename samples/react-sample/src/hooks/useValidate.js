@@ -12,14 +12,14 @@ export function useValidate(rules) {
     service.onTransition((state) => {
       if (state.matches("valid") || state.matches("invalid")) {
         setValid(state.matches("valid"));
-        setError(state.matches('valid') ? null : state.context.error);
+        setError(state.matches("valid") ? null : state.context.error);
       }
     });
   }, []);
 
   useEffect(() => {
     updateRules(rules, ref.current.value);
-}, [rules]);
+  }, [rules]);
 
   return { isValid, ref, error };
 }
