@@ -35,6 +35,7 @@ const fieldValidationMachine = xstate.createMachine(
           },
           UPDATE_RULES: {
             actions: "updateRules",
+            target: 'validating',
           },
         },
       },
@@ -45,6 +46,7 @@ const fieldValidationMachine = xstate.createMachine(
           },
           UPDATE_RULES: {
             actions: "updateRules",
+            target: 'validating'
           },
         },
       },
