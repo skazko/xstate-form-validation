@@ -11,7 +11,8 @@
     "react-dom": "^17.0.2",
     "react-scripts": "4.0.3",
     "web-vitals": "^1.0.1",
-    "xstate": "^4.17.1"
+    "xstate": "^4.17.1",
+    "xstate-form-validation": "github:skazko/xstate-form-validation#7ba19130462ab439dcb8a20c4f0dcaac01b16a34"
   },
   "scripts": {
     "start": "react-scripts start",

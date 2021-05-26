@@ -1,9 +1,11 @@
 {
   "name": "xstate-form-validation",
-  "version": "0.0.1",
+  "version": "0.0.6",
   "description": "x-state machines lib for form validation",
-  "main": "index.js",
+  "main": "./dist/index.js",
+  "module": "./dist/index.es.js",
   "scripts": {
+    "build": "rollup -c",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "type": "module",
@@ -11,5 +13,8 @@
   "license": "MIT",
   "dependencies": {
     "xstate": "^4.17.1"
+  },
+  "devDependencies": {
+    "rollup": "^2.48.0"
   }
 }
