@@ -23,11 +23,11 @@ jobs:
     - name: "diffs"
       run: |
         echo ${{ env.diff }}
-        echo ${{GITHUB_REF#refs/heads/}}
+        echo ${{ GITHUB_REF#refs/heads/ }}
 
     - name: "Commit & Push changes"
       if: ${{ env.diff }}
       uses: actions-js/push@master
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        branch: ${{GITHUB_REF#refs/heads/}}
+        branch: ${{ GITHUB_REF#refs/heads/ }}
