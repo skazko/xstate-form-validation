@@ -20,14 +20,17 @@ jobs:
     - name: "check if build has changed"
       run: echo 'diff=$(git diff  --shortstat -- 'dist')' >> $GITHUB_ENV
 
+    - name: "get branch name"
+      run: echo 'branch=$(echo $GITHUB_REF | cut -d'/' -f 3)' >> $GITHUB_ENV
+
     - name: "diffs"
       run: |
         echo ${{ env.diff }}
-        echo ${{ GITHUB_REF#refs/heads/ }}
+        echo ${{ env.branch }}
 
     - name: "Commit & Push changes"
       if: ${{ env.diff }}
       uses: actions-js/push@master
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        branch: ${{ GITHUB_REF#refs/heads/ }}
+        branch: ${{ env.branch }}
