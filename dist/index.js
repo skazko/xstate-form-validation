@@ -12,6 +12,10 @@ const fieldValidationMachine = xstate.createMachine(
       idle: {
         on: {
           VALIDATE: { target: "validating" },
+          UPDATE_RULES: {
+            actions: "updateRules",
+            target: "idle",
+          },
         },
       },
       validating: {

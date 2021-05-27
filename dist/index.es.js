@@ -8,6 +8,10 @@ const fieldValidationMachine = createMachine(
       idle: {
         on: {
           VALIDATE: { target: "validating" },
+          UPDATE_RULES: {
+            actions: "updateRules",
+            target: "idle",
+          },
         },
       },
       validating: {
