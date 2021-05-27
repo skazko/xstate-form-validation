@@ -22,6 +22,8 @@ jobs:
         echo 'DIFF<<EOF' >> $GITHUB_ENV
         git diff  --stat -- 'dist' >> $GITHUB_ENV
         echo 'EOF' >> $GITHUB_ENV
+    - name: "diffs"
+      run: echo ${{ env.DIFF }}
 
     - name: "Commit files"
       if: ${{ env.DIFF }}
