@@ -2,7 +2,7 @@ name: 'build'
 on:
   push:
 jobs:
-  test-job:
+  build:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -20,15 +20,11 @@ jobs:
     - name: "check if build has changed"
       run: echo 'diff=$(git diff  --shortstat -- 'dist')' >> $GITHUB_ENV
 
-    - name: "get branch name"
-      run: echo 'branch=$(echo $GITHUB_REF | cut -d'/' -f 3)' >> $GITHUB_ENV
-
-    - name: "diffs"
+    - name: "log diffs"
       run: |
         echo ${{ env.diff }}
-        echo ${{ env.branch }}
 
-    - name: "Commit & Push changes"
+    - name: "commit & push changes"
       if: ${{ env.diff }}
       uses: actions-js/push@master
       with:
