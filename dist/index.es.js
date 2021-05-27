@@ -110,7 +110,7 @@ function asyncValidatorService(context, event) {
   const { value } = event;
   const { asyncValidator } = context;
   const result = asyncValidator(value);
-  if ("then" in result) {
+  if (result && "then" in result) {
     return result;
   } else {
     throw new TypeError("async validator should return Promise");
