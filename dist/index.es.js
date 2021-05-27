@@ -94,6 +94,11 @@ const createValidationService = ({ rules = [] }) => {
   const updateRules = (rules, value) => service.send({ type: "UPDATE_RULES", rules, value });
 
   function register(field) {
+    console.lof(field);
+    console.lof(field);
+    console.lof(field);
+    console.lof(field);
+    console.lof(field);
     // could be different validation types
     field.addEventListener("input", (e) => {
       validate(e.target.value);
