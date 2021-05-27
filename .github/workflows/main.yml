@@ -18,10 +18,8 @@ jobs:
       run: npm run build
       
     - name: "check if build has changed"
-      run: |
-        echo 'DIFF<<EOF' >> $GITHUB_ENV
-        git diff  --stat -- 'dist' >> $GITHUB_ENV
-        echo 'EOF' >> $GITHUB_ENV
+      run: echo 'diff=$(git diff  --shortstat -- 'dist')' >> $GITHUB_ENV
+
     - name: "diffs"
       run: echo ${{ env.DIFF }}
 
