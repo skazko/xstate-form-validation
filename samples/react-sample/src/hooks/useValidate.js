@@ -1,11 +1,12 @@
 import { useRef, useEffect, useState } from "react";
 import { createValidationService } from "xstate-form-validation";
 
-export function useValidate(rules) {
+export function useValidate(rules, asyncValidator) {
   const [isValid, setValid] = useState(false);
   const [error, setError] = useState(null);
+  const [pending, setPending] = useState(false);
   const ref = useRef();
-  const [{ service, register, updateRules }] = useState(createValidationService({ rules }));
+  const [{ service, register, updateRules }] = useState(createValidationService({ rules, asyncValidator }));
 
   useEffect(() => {
     register(ref.current);
@@ -14,6 +15,7 @@ export function useValidate(rules) {
         setValid(state.matches("valid"));
         setError(state.matches("valid") ? null : state.context.error);
       }
+      setPending(state.matches("pending"));
     });
   }, []);
 
@@ -21,5 +23,5 @@ export function useValidate(rules) {
     updateRules(rules, ref.current.value);
   }, [rules]);
 
-  return { isValid, ref, error };
+  return { isValid, ref, error, pending };
 }

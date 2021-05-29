@@ -1,9 +1,11 @@
 import { forwardRef } from "react";
+import Loader from './Loader';
 
-const Field = forwardRef(({ isValid, error, ...rest }, ref) => {
+const Field = forwardRef(({ isValid, error, pending, ...rest }, ref) => {
   return (
     <div className="fieldContainer">
       <input
+        disabled={pending}
         ref={ref}
         className="field"
         style={{
@@ -13,6 +15,7 @@ const Field = forwardRef(({ isValid, error, ...rest }, ref) => {
         {...rest}
       />
       {error && <span style={{ color: "red" }}>{error}</span>}
+      {pending && <Loader />}
     </div>
   );
 });
