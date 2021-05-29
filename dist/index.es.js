@@ -81,11 +81,6 @@ const fieldValidationMachine = createMachine(
         rules: (context, event) => event.rules,
       }),
     },
-    guards: {
-      shoudStartAsyncValidation({ asyncValidator }) {
-        return asyncValidator && typeof asyncValidator === "function";
-      },
-    },
   }
 );
 
@@ -109,12 +104,15 @@ function validator(context, event) {
 function asyncValidatorService(context, event) {
   const { value } = event;
   const { asyncValidator } = context;
+  if (!asyncValidator || typeof asyncValidator !== 'function') {
+    throw new TypeError("async validator should be a function, but got - " + typeof asyncValidator);
+  }
   const result = asyncValidator(value);
   if (result && "then" in result) {
     return result;
-  } else {
-    throw new TypeError("async validator should return Promise");
-  }
+  } 
+  
+  throw new TypeError("async validator should return Promise");
 }
 
 const createValidationService = ({ rules = [], asyncValidator }) => {
