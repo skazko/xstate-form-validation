@@ -12,6 +12,10 @@ const fieldValidationMachine = xstate.createMachine(
       idle: {
         on: {
           VALIDATE: { target: "validating" },
+          UPDATE_RULES: {
+            actions: "updateRules",
+            target: "idle",
+          },
         },
       },
       validating: {
@@ -21,6 +25,20 @@ const fieldValidationMachine = xstate.createMachine(
           onDone: {
             target: "valid",
             actions: "clearError",
+          },
+
+          onError: {
+            target: "invalid",
+            actions: "setError",
+          },
+        },
+      },
+      pending: {
+        invoke: {
+          id: "async-validation",
+          src: asyncValidatorService,
+          onDone: {
+            target: "valid",
           },
           onError: {
             target: "invalid",
@@ -35,7 +53,10 @@ const fieldValidationMachine = xstate.createMachine(
           },
           UPDATE_RULES: {
             actions: "updateRules",
-            target: 'validating',
+            target: "validating",
+          },
+          ASYNC_VALIDATE: {
+            target: "pending",
           },
         },
       },
@@ -46,7 +67,7 @@ const fieldValidationMachine = xstate.createMachine(
           },
           UPDATE_RULES: {
             actions: "updateRules",
-            target: 'validating'
+            target: "validating",
           },
         },
       },
@@ -84,10 +105,25 @@ function validator(context, event) {
   });
 }
 
-const createValidationService = ({ rules = [] }) => {
+function asyncValidatorService(context, event) {
+  const { value } = event;
+  const { asyncValidator } = context;
+  if (!asyncValidator || typeof asyncValidator !== 'function') {
+    throw new TypeError("async validator should be a function, but got - " + typeof asyncValidator);
+  }
+  const result = asyncValidator(value);
+  if (result && "then" in result) {
+    return result;
+  } 
+  
+  throw new TypeError("async validator should return Promise");
+}
+
+const createValidationService = ({ rules = [], asyncValidator }) => {
   const machine = fieldValidationMachine.withContext({
     error: null,
     rules,
+    asyncValidator,
   });
 
   const service = xstate.interpret(machine);
@@ -95,6 +131,7 @@ const createValidationService = ({ rules = [] }) => {
   service.start();
 
   const validate = (value) => service.send({ type: "VALIDATE", value });
+  const asyncValidate = (value) => service.send({ type: "ASYNC_VALIDATE", value });
   const updateRules = (rules, value) => service.send({ type: "UPDATE_RULES", rules, value });
 
   function register(field) {
@@ -102,6 +139,12 @@ const createValidationService = ({ rules = [] }) => {
     field.addEventListener("input", (e) => {
       validate(e.target.value);
     });
+
+    if (asyncValidator) {
+      field.addEventListener("blur", (e) => {
+        asyncValidate(e.target.value);
+      });
+    }
   }
 
   return {
