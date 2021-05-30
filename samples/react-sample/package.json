@@ -6,13 +6,13 @@
     "@testing-library/jest-dom": "^5.11.4",
     "@testing-library/react": "^11.1.0",
     "@testing-library/user-event": "^12.1.10",
-    "@xstate/react": "^1.3.1",
+    "@xstate/react": "^1.3.3",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "react-scripts": "4.0.3",
     "web-vitals": "^1.0.1",
     "xstate": "^4.17.1",
-    "xstate-form-validation": "github:skazko/xstate-form-validation#03af51d50c96427fd63f6dea5d93f4078a7bcbae"
+    "xstate-form-validation": "github:skazko/xstate-form-validation#c33af6714429b0e65b3c710ccf6cdd0df258d2a9"
   },
   "scripts": {
     "start": "react-scripts start",
