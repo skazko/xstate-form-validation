@@ -4,156 +4,254 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 var xstate = require('xstate');
 
-const fieldValidationMachine = xstate.createMachine(
+const createFieldMachine = ({ name, rules, value, error }) =>
+  xstate.createMachine(
+    {
+      id: "field",
+      initial: "idle",
+      context: {
+        name,
+        rules,
+        error,
+        value,
+      },
+      states: {
+        idle: {
+          on: {
+            validate: "validation",
+            input: {
+              actions: "setValue",
+            },
+            UPDATE_RULES: {
+              actions: "updateRules",
+            },
+          },
+        },
+        validation: {
+          invoke: {
+            id: "sync-validation",
+            src: "syncValidator",
+            onDone: {
+              target: "valid",
+              actions: "clearError",
+            },
+            onError: {
+              target: "error",
+              actions: "setError",
+            },
+          },
+        },
+        valid: {
+          entry: ["updateField", "sendSuccess"],
+          on: {
+            input: {
+              actions: "setValue",
+              target: "validation",
+            },
+            UPDATE_RULES: {
+              actions: "updateRules",
+              target: "validation",
+            },
+          },
+        },
+        error: {
+          entry: ["updateField", "sendError"],
+          on: {
+            input: {
+              actions: "setValue",
+              target: "validation",
+            },
+            UPDATE_RULES: {
+              actions: "updateRules",
+              target: "validation",
+            },
+          },
+        },
+      },
+    },
+    {
+      actions: {
+        clearError: xstate.assign({
+          error: null,
+        }),
+        setError: xstate.assign({
+          error: (context, event) => event.data.message,
+        }),
+        updateRules: xstate.assign({
+          rules: (context, event) => event.rules,
+        }),
+        setValue: xstate.assign({
+          value: (context, event) => {
+            return event.value;
+          },
+        }),
+        updateField: xstate.sendParent((context) => {
+          return {
+            type: "FIELD.UPDATE",
+            field: context,
+          };
+        }),
+        sendSuccess: xstate.sendParent((context) => {
+          return {
+            type: "FIELD.SUCCESS",
+            name: context.name,
+          };
+        }),
+        sendError: xstate.sendParent((context) => {
+          return {
+            type: "FIELD.ERROR",
+            name: context.name,
+          };
+        }),
+      },
+      services: {
+        syncValidator: (context, event) => {
+          const { rules, value } = context;
+          const rulesLength = rules?.length || 0;
+          return new Promise((resolve, reject) => {
+            for (let i = 0; i < rulesLength; i++) {
+              const checkResult = rules[i](value);
+              if (checkResult !== true) {
+                reject(new Error(checkResult));
+                return;
+              }
+            }
+
+            resolve();
+          });
+        },
+      },
+    }
+  );
+
+const { pure } = xstate.actions;
+
+function createField({ value, name, rules }) {
+  return {
+    value,
+    name,
+    rules,
+    error: null,
+  };
+}
+
+const formMachine = xstate.createMachine(
   {
-    id: "field-validation",
+    id: "form",
     initial: "idle",
+    context: {
+      fields: {},
+    },
+    on: {
+      "FIELD.UPDATE": {
+        actions: ["updateField"],
+      },
+      "FIELD.ADD": {
+        actions: ["addField"],
+      },
+      submit: [
+        {
+          target: "submit",
+          cond: "formValid",
+        },
+        {
+          target: "error",
+        },
+      ],
+    },
     states: {
       idle: {
         on: {
-          VALIDATE: { target: "validating" },
-          UPDATE_RULES: {
-            actions: "updateRules",
-            target: "idle",
-          },
+          submit: "validation",
         },
       },
-      validating: {
-        invoke: {
-          id: "sync-validation",
-          src: validator,
-          onDone: {
+      error: {
+        entry: ["focusError"],
+        on: {
+          "FIELD.SUCCESS": {
             target: "valid",
-            actions: "clearError",
-          },
-
-          onError: {
-            target: "invalid",
-            actions: "setError",
-          },
-        },
-      },
-      pending: {
-        invoke: {
-          id: "async-validation",
-          src: asyncValidatorService,
-          onDone: {
-            target: "valid",
-          },
-          onError: {
-            target: "invalid",
-            actions: "setError",
+            cond: "formValid",
           },
         },
       },
       valid: {
         on: {
-          VALIDATE: {
-            target: "validating",
-          },
-          UPDATE_RULES: {
-            actions: "updateRules",
-            target: "validating",
-          },
-          ASYNC_VALIDATE: {
-            target: "pending",
+          "FIELD.ERROR": {
+            target: "error",
           },
         },
       },
-      invalid: {
-        on: {
-          VALIDATE: {
-            target: "validating",
+      validation: {
+        initial: "active",
+        states: {
+          active: {
+            entry: "validateAllFields",
+            on: {
+              "FIELD.ERROR": {
+                target: "done",
+                cond: "allValidated",
+              },
+              "FIELD.SUCCESS": {
+                target: "done",
+                cond: "allValidated",
+              },
+            },
           },
-          UPDATE_RULES: {
-            actions: "updateRules",
-            target: "validating",
+          done: {
+            entry: xstate.send("submit"),
           },
         },
+      },
+      submit: {
+        invoke: {
+          src: "submitService",
+          onDone: "submitted",
+          onError: "error",
+        },
+      },
+      submitted: {
+        type: "final",
       },
     },
   },
   {
     actions: {
-      clearError: xstate.assign({
-        error: null,
+      addField: xstate.assign({
+        fields: (context, event) => {
+          const { field } = event;
+          const newField = createField(field);
+
+          return Object.assign(context.fields, {
+            [newField.name]: {
+              ...newField,
+              ref: xstate.spawn(createFieldMachine(newField)),
+            },
+          });
+        },
       }),
-      setError: xstate.assign({
-        error: (context, event) => event.data.message,
+      updateField: xstate.assign({
+        fields: (context, event) => ({
+          ...context.fields,
+          [event.field.name]: {
+            ...context.fields[event.field.name],
+            ...event.field,
+          },
+        }),
       }),
-      updateRules: xstate.assign({
-        rules: (context, event) => event.rules,
+      validateAllFields: pure((context, event) => {
+        return Object.values(context.fields).map((field) => {
+          return xstate.send({ type: "validate" }, { to: field.ref });
+        });
       }),
+    },
+    guards: {
+      formValid: (context) => Object.values(context.fields).every((field) => field.error === null),
+      allValidated: (context, event) =>
+        Object.values(context.fields)
+          .filter((field) => field.name !== event.name)
+          .every((field) => ["valid", "error"].some(field.ref.state.matches)),
     },
   }
 );
 
-function validator(context, event) {
-  const { value } = event;
-  const { rules } = context;
-  const rulesLength = rules?.length || 0;
-  return new Promise((resolve, reject) => {
-    for (let i = 0; i < rulesLength; i++) {
-      const checkResult = rules[i](value);
-      if (checkResult !== true) {
-        reject(new Error(checkResult));
-        return;
-      }
-    }
-
-    resolve();
-  });
-}
-
-function asyncValidatorService(context, event) {
-  const { value } = event;
-  const { asyncValidator } = context;
-  if (!asyncValidator || typeof asyncValidator !== 'function') {
-    throw new TypeError("async validator should be a function, but got - " + typeof asyncValidator);
-  }
-  const result = asyncValidator(value);
-  if (result && "then" in result) {
-    return result;
-  } 
-  
-  throw new TypeError("async validator should return Promise");
-}
-
-const createValidationService = ({ rules = [], asyncValidator }) => {
-  const machine = fieldValidationMachine.withContext({
-    error: null,
-    rules,
-    asyncValidator,
-  });
-
-  const service = xstate.interpret(machine);
-
-  service.start();
-
-  const validate = (value) => service.send({ type: "VALIDATE", value });
-  const asyncValidate = (value) => service.send({ type: "ASYNC_VALIDATE", value });
-  const updateRules = (rules, value) => service.send({ type: "UPDATE_RULES", rules, value });
-
-  function register(field) {
-    // could be different validation types
-    field.addEventListener("input", (e) => {
-      validate(e.target.value);
-    });
-
-    if (asyncValidator) {
-      field.addEventListener("blur", (e) => {
-        asyncValidate(e.target.value);
-      });
-    }
-  }
-
-  return {
-    service,
-    register,
-    updateRules,
-    validate,
-    machine,
-  };
-};
-
-exports.createValidationService = createValidationService;
+exports.formMachine = formMachine;
