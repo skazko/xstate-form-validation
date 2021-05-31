@@ -309,7 +309,6 @@ function createFormData(state) {
     fields: {},
   };
   for (let key in state.context.fields) {
-    console.log(fields[key].error);
     form.errors[key] = fields[key].error;
     form.fields[key] = {
       isValid: fields[key].ref.state.matches("valid"),
@@ -323,7 +322,7 @@ function createFormData(state) {
       if (prop in target) {
         return Reflect.get(target, prop, receiver);
       }
-
+      // значение по умолчанию
       return {
         isValid: false,
         hasError: false,
