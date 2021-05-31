@@ -12,7 +12,7 @@
     "react-scripts": "4.0.3",
     "web-vitals": "^1.0.1",
     "xstate": "^4.17.1",
-    "xstate-form-validation": "github:skazko/xstate-form-validation#d27dea40badf74fe7cd72b953484b6fb71841514"
+    "xstate-form-validation": "github:skazko/xstate-form-validation#7bc7836dfc1d97bb9c7081d9161eb8bb34b50490"
   },
   "scripts": {
     "start": "react-scripts start",

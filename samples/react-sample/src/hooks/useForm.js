@@ -2,8 +2,8 @@ import { useMachine } from "@xstate/react";
 import { formMachine, utils } from "xstate-form-validation";
 const { createRegister, createFormData, createSubmit, createSubmitService } = utils;
 
-export function useFormMachine({ onSubmit = () => Promise.resolve() } = {}) {
-  const [state, send] = useFormMachineWithSubmitService(formMachine, onSubmit);
+export function useForm({ onSubmit = () => Promise.resolve() } = {}) {
+  const [state, send] = useFormMachine(formMachine, onSubmit);
   const register = createRegister(state, send);
   const submit = createSubmit(send);
   const form = createFormData(state);
@@ -11,7 +11,7 @@ export function useFormMachine({ onSubmit = () => Promise.resolve() } = {}) {
   return { register, submit, form };
 }
 
-function useFormMachineWithSubmitService(machine, submitCb) {
+function useFormMachine(machine, submitCb) {
   const [state, send, service] = useMachine(
     machine.withConfig({ services: { submitService: createSubmitService(submitCb) } }),
     { devTools: true }

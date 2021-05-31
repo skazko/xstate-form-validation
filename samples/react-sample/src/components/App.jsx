@@ -1,16 +1,18 @@
-import { useFormMachine } from "../hooks/useFormValidate";
+import { useForm } from "../hooks/useForm";
 
 function App() {
-  const { register, submit, form } = useFormMachine({
+  const { register, submit, form } = useForm({
     onSubmit: (data) => {
       console.log(data);
       return Promise.resolve();
     },
   });
-  const { hasError, errors, fields } = form;
+  const { hasError, errors, fields, submitted } = form;
   const { name, password } = fields;
 
-  return (
+  return submitted ? (
+    <span>Спасибо за регистрацию</span>
+  ) : (
     <form style={{ margin: "0 auto", maxWidth: "640px", paddingTop: "50px" }} onSubmit={submit}>
       <div className="formField">
         <div className="fieldContainer">
