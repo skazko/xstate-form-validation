@@ -162,7 +162,6 @@ const formMachine = createMachine(
         },
       },
       error: {
-        entry: ["focusError"],
         on: {
           "FIELD.SUCCESS": {
             target: "valid",
@@ -250,4 +249,98 @@ const formMachine = createMachine(
   }
 );
 
-export { formMachine };
+/**
+ * Создает функцию для регистрации поля
+ */
+function createRegister(state, send, mode = 'onChange') {
+  const { fields } = state.context;
+
+  return ({ rules = [], name, defaultValue = "" } = {}) => {
+    if (!(name in fields)) {
+      console.log("register: ", name);
+      send({
+        type: "FIELD.ADD",
+        field: {
+          name,
+          value: defaultValue,
+          rules,
+        },
+      });
+    }
+
+    return {
+      name,
+      [mode]: (e) => {
+        fields[name].ref.send({ type: "input", value: e.target.value });
+      },
+    };
+  };
+}
+
+/**
+ * Создает сервис для отправки формы
+ */
+function createSubmitService(cb) {
+  return (context) => {
+    return cb(Object.fromEntries(Object.entries(context.fields).map(([key, value]) => [key, value.value])));
+  };
+}
+
+/**
+ * Создает функцию для отправки формы 
+ */
+function createSubmit(send) {
+  return (e) => {
+    e.preventDefault();
+    send("submit");
+  };
+}
+
+/**
+ * Создает объект с данными формы
+ */
+function createFormData(state) {
+  const { fields } = state.context;
+
+  const form = {
+    submitted: state.matches("submitted"),
+    hasError: state.matches("error"),
+    errors: {},
+    fields: {},
+  };
+  for (let key in state.context.fields) {
+    console.log(fields[key].error);
+    form.errors[key] = fields[key].error;
+    form.fields[key] = {
+      isValid: fields[key].ref.state.matches("valid"),
+      hasError: fields[key].ref.state.matches("error"),
+      value: fields[key].value,
+    };
+  }
+
+  form.fields = new Proxy(form.fields, {
+    get(target, prop, receiver) {
+      if (prop in target) {
+        return Reflect.get(target, prop, receiver);
+      }
+
+      return {
+        isValid: false,
+        hasError: false,
+        value: undefined,
+      };
+    },
+  });
+
+  return form;
+}
+
+var utils = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  createRegister: createRegister,
+  createSubmitService: createSubmitService,
+  createSubmit: createSubmit,
+  createFormData: createFormData
+});
+
+export { formMachine, utils };
