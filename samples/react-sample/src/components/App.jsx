@@ -1,48 +1,53 @@
-import { useValidate } from "../hooks/useValidate";
-import Field from "./Field";
-import { minLength, required } from "../rules";
-import { useEffect, useState, useCallback } from "react";
-
-function checkName(name) {
-  return fetch(`https://jsonplaceholder.typicode.com/users?username=${name}`)
-    .then((res) => res.json())
-    .then((users) => {
-      if (users.length) {
-        throw new Error("Name already exists");
-      }
-      return true;
-    });
-}
+import { useForm } from "../hooks/useForm";
 
 function App() {
-  const nameCheck = useCallback(checkName, []);
-  const nameRequired = useCallback(required("Input your name"), []);
-  const passRequired = useCallback(required("Input password"), []);
-  const nameMinLength = useCallback(minLength(3, "Name should be more than 3 symbols"), []);
-  const passMinLength = useCallback(minLength(8, "Pass should be more than 8 symbols"), []);
-  const [passRules] = useState([passRequired, passMinLength]);
-  const [nameRules] = useState([nameRequired, nameMinLength]);
-  const { isValid: nameIsValid, ref: nameRef, error: nameError, pending } = useValidate(nameRules, nameCheck);
-  const { isValid: passIsValid, ref: passRef, error: passError } = useValidate(passRules);
+  const { register, submit, form } = useForm({
+    onSubmit: (data) => {
+      console.log(data);
+      return Promise.resolve();
+    },
+  });
+  const { hasError, errors, fields, submitted } = form;
+  const { name, password } = fields;
 
-  const onSubmit = (e) => {
-    e.preventDefault();
-    if (!nameIsValid || !passIsValid) {
-      return;
-    }
-    const fd = new FormData(e.target);
-    console.log(Object.fromEntries(fd.entries()));
-  };
-  return (
-    <form style={{ margin: "0 auto", maxWidth: "640px", paddingTop: "50px" }} onSubmit={onSubmit}>
-      <p style={{opacity: 0.6}}>Bret name exists</p>
-      <div>
-        <Field pending={pending} name="name" ref={nameRef} isValid={nameIsValid} error={nameError} />
+  return submitted ? (
+    <span>Спасибо за регистрацию</span>
+  ) : (
+    <form style={{ margin: "0 auto", maxWidth: "640px", paddingTop: "50px" }} onSubmit={submit}>
+      <div className="formField">
+        <div className="fieldContainer">
+          <input
+            {...register({
+              name: "name",
+              rules: [
+                (v) => !!v || "Введите имя",
+                (v) => v.trim().length >= 3 || "Имя должно быть как минимум из 3 символов",
+              ],
+            })}
+            className="field"
+            type="text"
+          />
+          {name.hasError && <span style={{ color: "red" }}>{errors.name}</span>}
+        </div>
       </div>
-      <div>
-        <Field name="pass" ref={passRef} isValid={passIsValid} error={passError} />
+      <div className="formField">
+        <div className="fieldContainer">
+          <input
+            {...register({
+              name: "password",
+              rules: [
+                (v) => !!v || "Введите пароль",
+                (v) => v.trim().length >= 6 || "Пароль должен быть как минимум из 6 символов",
+              ],
+            })}
+            className="field"
+            type="password"
+          />
+          {password.hasError && <span style={{ color: "red" }}>{errors.password}</span>}
+        </div>
       </div>
-      <button disabled={pending || !nameIsValid || !passIsValid} type="submit">
+
+      <button disabled={hasError} type="submit">
         Submit
       </button>
     </form>
