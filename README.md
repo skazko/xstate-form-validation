@@ -1,5 +1,5 @@
 - [x] синхронная валидация одного поля (пример - минимальная длина поля)
-- [x] асинхронная валидация одного поля (пример - проверка на сервере занято ли имя пользователя)
+- [ ] асинхронная валидация одного поля (пример - проверка на сервере занято ли имя пользователя)
 - [ ] синхронная валидация всей формы, ошибка присваивается конкретному полю (пример: пароль - повторение пароля)
 - [ ] асинхронная валидация всей формы, ошибка присваивается конкретному полю (пример: предварительная проверка - извините, ваш тариф не позволяет создание такого количества узлов)
 - [ ] асинхронная валидация всей формы, ошибка присваивается всей форме
@@ -13,150 +13,198 @@
 для удобства использования создатим хук:
 
 ```javascript
-import { useRef, useEffect, useState } from "react";
-import { createValidationService } from "xstate-form-validation";
+import { useMachine } from "@xstate/react";
+import { formMachine, utils } from "xstate-form-validation";
+const { createRegister, createFormData, createSubmit, createSubmitService } = utils;
 
-export function useValidate(rules, asyncValidator) {
-  const [isValid, setValid] = useState(false);
-  const [error, setError] = useState(null);
-  const [pending, setPending] = useState(false);
-  const ref = useRef();
-  const [{ service, register, updateRules }] = useState(createValidationService({ rules, asyncValidator }));
+export function useForm({ onSubmit = () => Promise.resolve() } = {}) {
+  // запускает машину с сервисом для отправки формы
+  const [state, send] = useFormMachine(formMachine, onSubmit);
+  // создает функцию для регистрации полей
+  const register = createRegister(state, send);
+  // создает функцию отправки формы
+  const submit = createSubmit(send);
+  // получает данные формы для отображения
+  const form = createFormData(state);
 
-  useEffect(() => {
-    // регистрируем поле
-    register(ref.current);
-    // устанавливаем обработчик изменения состояния
-    service.onTransition((state) => {
-      // при изменении состояния устанавливаем соответствующие значения
-      if (state.matches("valid") || state.matches("invalid")) {
-        setValid(state.matches("valid"));
-        setError(state.matches("valid") ? null : state.context.error);
-      }
-      setPending(state.matches("pending"));
-    });
-  }, []);
+  return { register, submit, form };
+}
 
-  // обновляем правила проверки значения при их изменении
-  useEffect(() => {
-    updateRules(rules, ref.current.value);
-  }, [rules]);
+// Вспомогательный хук
+function useFormMachine(machine, submitCb) {
+  // запускает машину с сервисом
+  const [state, send, service] = useMachine(
+    machine.withConfig({ services: { submitService: createSubmitService(submitCb) } }),
+    { devTools: true }
+  );
 
-  return { isValid, ref, error, pending };
+  return [state, send, service];
 }
 ```
 
 И используем его в компоненте:
 
 ```javascript
-function App() {
-  // Поле имя обязательное
-  const nameRequired = useCallback(required("Input your name"), []);
-  // и в нем должно быть больше трех символов
-  const nameMinLength = useCallback(minLength(3, "Name should be more than 3 symbols"), []);
-  // проверям не зарегистрировано ли уже такое имя
-  const nameCheck = useCallback(checkName, []);
-  const [nameRules] = useState([nameRequired, nameMinLength]);
-  const { isValid, ref, error, pending } = useValidate(nameRules, nameCheck);
+import { useForm } from "../hooks/useForm";
 
-  const onSubmit = (e) => {
-    e.preventDefault();
-  };
-  return (
-    <form style={{ margin: "0 auto", maxWidth: "640px", paddingTop: "50px" }} onSubmit={onSubmit}>
-      <div>
+function App() {
+  const { register, submit, form } = useForm({
+    // этот колбек будет вызываться при переходе формы в состояние submit
+    // должен возвращать промис
+    onSubmit: (data) => {
+      console.log(data);
+      return Promise.resolve();
+    },
+  });
+  const { hasError, errors, fields } = form;
+  const { name, password } = fields;
+
+  return submitted ? (
+    <span>Спасибо за регистрацию</span>
+  ) : (
+    <form style={{ margin: "0 auto", maxWidth: "640px", paddingTop: "50px" }} onSubmit={submit}>
+      <div className="formField">
         <div className="fieldContainer">
           <input
-            disabled={pending}
-            ref={ref}
+            {...register({
+              name: "name",
+              rules: [
+                (v) => !!v || "Введите имя",
+                (v) => v.trim().length >= 3 || "Имя должно быть как минимум из 3 символов",
+              ],
+            })}
             className="field"
-            style={{
-              borderColor: isValid ? "green" : error ? "red" : "black",
-            }}
             type="text"
           />
-          {error && <span style={{ color: "red" }}>{error}</span>}
+          {name.hasError && <span style={{ color: "red" }}>{errors.name}</span>}
         </div>
       </div>
-      <button disabled={pending || !isValid} type="submit">
+      <div className="formField">
+        <div className="fieldContainer">
+          <input
+            {...register({
+              name: "password",
+              rules: [
+                (v) => !!v || "Введите пароль",
+                (v) => v.trim().length >= 6 || "Пароль должен быть как минимум из 6 символов",
+              ],
+            })}
+            className="field"
+            type="password"
+          />
+          {password.hasError && <span style={{ color: "red" }}>{errors.password}</span>}
+        </div>
+      </div>
+
+      <button disabled={hasError} type="submit">
         Submit
       </button>
     </form>
   );
 }
-
-export default App;
 ```
-
-## `createValidationService(config)`
-
-Устанавливает правила проверки в контекст машины интерпретирует ее и стартует.
-
-`config.rules` - массив функций-правил для проверки
-`config.asyncValidator` - функция асинхронной(серверной) проверки
-
-### Возвращает:
-
-```javascript
-{
-  service,
-  register,
-  updateRules,
-  validate,
-  machine,
-}
-```
-
-### `service` - интерпретированный сервис для машины
-
-### `register(input)` - функция для установки обработчика - валидатора на инпут
-
-### `updateRules(rules, value)` - функция для обновления правил проверки
-
-### `validate(value)` - функция для валидации значения
-
-### `machine` - машина
 
 ## Описание
 
-Для валидации поля его нужно зарегистрировать, с помощью функции `register`, на вход передать `HTMLInputElement` который нужно валидировать.
+Форма описана в `lib/machines/formMachine.js`. Начальное состояние - `idle`, из этого состояния можно перейти в состояние `validation`, при этом сразу запускается валидация всех полей, после завершения валидации, если не возникло ошибок, переходим в состояние `submit`. При переходе в `submit` запускается сервис отправки формы, и если в процессе отправки не возникает ошибок переходим в финальное состояние `submitted`. В случае возникновения ошибок переходим в состояние `error`. Из этого состояния можно перейти в состояние `valid`, если все валидации проходят и далее к `submit`.
 
-### Синтаксис
+Состояние отдельного поля описано в `lib/machines/fieldMachine.js`. В контексте хранятся `name` имя поля (html аттрибут), `rules` - массив функция правил проверки, `error` - сообщение ошибки валидации, `value` - текущий ввод. Начальное состояние - `idle`, из этого состояния можно перейти в состояние `validation` при этом запускается сервис для валидации поля. В случае успешной валидации переходим в состояние `valid`, в противном случае - `error`. Машины поля порождаются в машине формы и отправляют сообщения родительской машине при изменении состояния.
 
-```javascript
-register(input);
+Для удобства использования есть утилиты в `lib/utils.js`.
+
+### `createRegister(state, send, mode = 'onChange')`
+
+Создает функцию для регистрации полей в машине формы.
+
+### Возвращает:
+
+```typescript
+function({
+  rules = [], // массив функций проверки значения
+  name, // имя поля
+  defaultValue = "" // значение поля по умолчанию
+  } = {}): {
+    name, // имя поля
+    [mode] // обработчик который надо повесить на инпут
+  }
 ```
 
-### Параметры
+### `createSubmitService(cb: () => Promise<unknown>)`
 
-`input` - HTMLInputElement ввод которого нужно валидировать
+Создает сервис для отправки формы.
 
-Для отображения текущего состояния использовать `service.onTransition`
+`cb` - функция отправки формы должна возвращать Promise
 
-### Синтаксис
+### `createSubmit(send)`
 
-```javascript
-service.onTransition(callback);
-```
+Создает функцию для отправки формы.
 
-### Параметры
+### `createFormData(state)`
 
-`callback` - функция вызывающаяся при изменении состояния, принимает на вход 1 аргумент - текущее состояние: [state](https://xstate.js.org/api/classes/state.html). Для проверки, что текущее состояние валидно, можно использовать `state.matches('valid')`, а что состояние не валидно - `state.matches('invalid')`. Текст ошибки, при наличии - `state.context.error`
+Создает объект с данными формы из текущего состояния машины формы.
 
-Для синхронной валидации используются функции - правила проверки введенного значения. Если правило возвращает значение отличное от true, тогда валидация считается не пройденной, если из функции возвращается строка, она будет сохранена в контексте и может быть использована ~~против вас~~ в качестве сообщения об ошибке.
+### Возвращает:
 
-Стейт машина имеет 4 состояния: начальное, валидация, валидное и не валидное, для перехода в состояние валидации необходимо отправлять событие `VALIDATE`:
-
-```javascript
+```typescript
 {
-  type: "VALIDATE",
-  value: e.target.value
+  submitted: Boolean, // отправлена ли форма
+  hasError: Boolean, // есть ли в форме ошибки
+  // мапа с ошибками,  ключ - имя поля с ошибкой
+  errors: {
+    [key: string]: string, 
+  },
+  // мапа с данными по полю, ключ - имя поля
+  fields: {
+    [key: string]: {
+      isValid: Boolean, // валидно ли поле
+      hasError: Boolean, // есть ли в поле ошибки
+      value, // значение поля
+    }
+  },
 }
 ```
+Для синхронной валидации используются функции - правила проверки введенного значения. Если правило возвращает значение отличное от true, тогда валидация считается не пройденной, если из функции возвращается строка, она будет сохранена в контексте и может быть использована ~~против вас~~ в качестве сообщения об ошибке.
+## Использование (пример на React)
+1) Для начала необходимо добавить в конфиг машины сервис для отправки формы и интерпретировать машину формы, создать сервис можно при помощи `createSubmitService`:
 
-- `value` - значение поля
+```javascript
+import { useMachine } from "@xstate/react";
 
-Валидация реализована в виде функции возвращающей промис, если валидация "прошла" промис резолвится, если нет - отклоняется. Описание ошибки валидации хранится в контексте, так же как и массив функций - правил валидации.
+const submitForm = (data) => some.api.submit(data);
+
+const [state, send, service] = useMachine(
+    machine.withConfig({ services: { submitService: createSubmitService(submitForm) } })
+  );
+```
+2) Далее нужны функции для регистрации полей и отправки формы:
+
+```javascript
+const register = createRegister(state, send);
+const submit = createSubmit(send);
+```
+
+3) А также информация о форме:
+
+```javascript
+const form = createFormData(state);
+```
+
+4) Далее в компоненте регистрируем поле
+
+```jsx
+<input
+  {...register({
+    name: "name",
+    rules: [
+      (v) => !!v || "Введите имя",
+      (v) => v.trim().length >= 3 || "Имя должно быть как минимум из 3 символов",
+    ],
+  })}
+  type="text"
+/>
+```
+
+5) Данные о состоянии формы можно взять в `form` и отправить ее при помощи `submit`.
 
 ## Ограничения
 
@@ -175,12 +223,10 @@ service.onTransition(callback);
 
    Изначально я рассматривал вариант, когда правила передаются в функцию валидации, но в таком случае валидация происходит снаружи библиотеки
 
-2. Валидация происходит сразу по событию `input`, необходимо добавить различные сценарии валидации, но при этом эти сценарии все равно будут ограничены.
-3. То же и для асинхронной валидации, в данный момент происходит при потере фокуса полем. 
+2. Текущая реализация адаптирована под использование с react (createRegister), возможно понадобяться дополнительные функции для универсальности
 
 ## Почему выбрано такое решение
 
-1. Для удобства работы с машиной ее удобно интерпретировать, поэтому я решил экспортировать функцию, которая сразу интерпретирует сервис и запускает его и возвращает его и нужные функции
-2. Т.к. у нас библиотека для валидации, мы хотим просто описывать как валидировать, поэтому обработчик в котором происходит валидация устанавливается внутри библиотеки.
-3. Функция `register` вынесена отдельно для возможности вешать обработчики на поля, которых еще нет на странице
-4. Асинхронная валидация недоступна из состояния `invalid`
+1. Использование набора функций для валидации на мой взгляд универсальный и удобный подход, хотя конечно можно было бы сделать какие-то готовые функции (required, minLength)
+2. Данное решение позволяет описывать правила проверки декларативно
+
